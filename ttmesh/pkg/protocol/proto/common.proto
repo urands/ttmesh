@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package ttmesh.proto;
+
+option go_package = "ttmesh/pkg/protocol/proto;ttmeshproto";
+
+// Shared enums across the protocol
+enum MessageType {
+  MT_UNKNOWN = 0;
+  MT_TASK = 1;
+  MT_RESULT = 2;
+  MT_CONTROL = 3;
+  MT_HEARTBEAT = 4;
+  MT_ROUTE = 5;
+  MT_DAG_FRAGMENT = 6;
+}
+
+enum Status {
+  ST_OK = 0;
+  ST_PARTIAL = 1;
+  ST_RETRY = 2;
+  ST_FAILED = 3;
+  ST_CANCELED = 4;
+  ST_TIMEOUT = 5;
+}
+
+enum AckCode {
+  ACK_OK = 0;
+  ACK_NACK = 1;
+}
+
+enum FlowScope {
+  FLOW_PARAM = 0;
+  FLOW_STEP = 1;
+  FLOW_WORKFLOW = 2;
+}
+
+enum Codec {
+  CODEC_RAW = 0;
+  CODEC_PROTOBUF = 1;
+  CODEC_CAPNPROTO = 2;
+  CODEC_FLATBUFFERS = 3;
+}
+
+enum Compression {
+  COMP_NONE = 0;
+  COMP_ZSTD = 1;
+  COMP_SNAPPY = 2;
+}
+
+message NodeRef {
+  string id = 1;           // opaque node id
+  string geohash = 2;      // optional region/geography hint
+}
+
+message RouteRef {
+  string route_id = 1;
+  uint32 version = 2;
+  bytes hash = 3;          // optional integrity hash
+}
+
+message BlobRef {
+  string id = 1;           // e.g., "sha256:..."
+  uint64 size = 2;         // 0 if unknown
+  string media_type = 3;   // MIME
+  string schema_ref = 4;   // optional schema link
+  string integrity_alg = 5;// "sha256"/"blake3"
+  bytes integrity = 6;     // object hash
+}
+
+message Metrics {
+  uint64 cpu_ms = 1;
+  uint64 wall_ms = 2;
+  uint64 mem_peak_bytes = 3;
+  map<string,string> custom = 4; // arbitrary metrics
+}
+
+message LogLine {
+  int64 ts_unix_ms = 1;
+  string level = 2; // "INFO"/...
+  string text = 3;
+}
+
+// PeerMeta describes peer identity and liveness metadata.
+message PeerMeta {
+  string id = 1;                    // canonical peer id (e.g., pk:ed25519:...)
+  string node_name = 2;             // optional human-friendly name
+  string alg = 3;                   // key algorithm (e.g., "ed25519")
+  bytes pubkey = 4;                 // public key bytes
+  repeated string addresses = 5;    // observed or advertised addresses
+  bool reachable = 6;               // reachability hint
+  map<string,string> labels = 7;    // optional labels/tags
+  PeerKind kind = 8;                // peer kind/role
+  HandshakeStatus handshake = 9;    // handshake state
+  uint64 msgs_in = 10;              // received message count
+  uint64 msgs_out = 11;             // sent message count
+  uint64 bytes_in = 12;             // received bytes
+  uint64 bytes_out = 13;            // sent bytes
+  int64 last_hello_ts = 14;         // last received hello
+  int64 last_ack_ts = 15;           // last sent/received hello-ack
+  repeated string connected_direct_ids = 16; // direct connections to other peers (adjacency)
+  repeated string routes = 17;      // known route identifiers
+}
+
+// PeerKind classifies peer role for routing decisions.
+enum PeerKind {
+  PK_UNKNOWN = 0;
+  PK_CLIENT = 1;
+  PK_NODE = 2;
+  PK_RELAY = 3;
+  PK_PROXY = 4;
+  PK_OUTBOUND_ONLY = 5; // NATed peer without listening port
+}
+
+// HandshakeStatus reflects current handshake state for a session.
+enum HandshakeStatus {
+  HS_UNKNOWN = 0;
+  HS_HELLO_RX = 1;
+  HS_VERIFIED = 2;
+  HS_FAILED = 3;
+}

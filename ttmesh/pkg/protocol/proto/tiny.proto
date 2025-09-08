@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package ttmesh.proto;
+
+option go_package = "ttmesh/pkg/protocol/proto;ttmeshproto";
+
+import "common.proto";
+
+// Minimal bus header to support shared "one channel" transport
+// Useful for brokers (headers) or QUIC (prefix before payload)
+enum BusKind {
+  BK_UNKNOWN = 0;
+  BK_INVOKE = 1;
+  BK_CHUNK = 2;
+  BK_RESULT = 3;
+  BK_CONTROL = 4;
+  BK_ACK = 5;
+  BK_GOSSIP = 6;
+  BK_LEASE = 7;
+}
+
+message BusHeader {
+  uint32 version = 1;          // =1
+  BusKind kind = 2;            // invoke/chunk/result/control/ack/gossip/lease
+  uint32 priority = 3;         // 0..7 (0 is highest)
+  uint32 flags = 4;            // reserved/bit flags
+  uint32 shard_hash = 5;       // hash(workflow_id) for partitioning
+  // Optional varlen hints for routing/fanout (may be empty)
+  string workflow_id = 10;
+  string step_id = 11;
+  string node_scope = 12;
+  string region_scope = 13;
+  string capability_scope = 14;
+}
+
+// Tiny result: compact response form (protobuf representation)
+// Mirrors the on-wire compact form used over QUIC
+message TinyResult {
+  uint32 scid = 1;             // session context id
+  uint64 seq = 2;              // local sequence number
+  bool final = 3;              // final for current step
+  Status status = 4;           // OK/PARTIAL/FAILED/...
+
+  // If set, identifies output name by dictionary index
+  optional uint64 name_index = 5;
+
+  oneof payload {
+    bytes inline_payload = 10;   // small inline result
+    bytes blob_id_short = 11;    // short object id (8..16 bytes)
+  }
+
+  // Optional metrics/progress (sent only when needed)
+  Metrics metrics = 12;          // optional
+  float progress = 13;           // optional 0..1
+}
+
+// Session initialization: cache base params on the remote node
+message SessionInit {
+  uint32 scid = 1;                 // session context id (assigned by sender)
+  string workflow_id = 2;          // shard/workflow id
+  string step_id = 3;              // current step id
+  NodeRef reply_to = 4;            // where to send final/acks (logical)
+  repeated string output_names = 5;// dictionary for TinyResult.name_index
+  Codec default_codec = 6;         // default payload codec hint
+  Compression default_compression = 7; // default compression hint
+}
+
+// Session close: allows receiver to drop cached session data
+message SessionClose {
+  uint32 scid = 1;
+}

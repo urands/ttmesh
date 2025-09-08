@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package ttmesh.proto;
+
+option go_package = "ttmesh/pkg/protocol/proto;ttmeshproto";
+
+import "common.proto";
+
+// Routing/meta cursor as described in Protocol.md
+message Metadata {
+  RouteRef route_ref = 1;          // link to external route/DAG manifest
+  string workflow_id = 2;          // workflow instance id
+  string task_id = 3;              // client/task id (idempotency)
+  string step_id = 4;              // current step in DAG
+  string next_step = 5;            // optional hint for next hop
+  uint32 hop_ttl = 6;              // prevents infinite loops
+  map<string,string> attrs = 7;    // free-form attributes/labels
+  string shard_key = 8;            // computed sharding key (optional)
+  int64 deadline_unix_ms = 9;      // overall workflow deadline (0 if none)
+}
+
+// Breadcrumbs of routing decisions (trim to last N on sender if needed)
+message HopMeta {
+  string node_id = 1;            // who made the decision
+  int64 ts_unix_ms = 2;          // timestamp
+  string region = 3;             // region/geohash or label
+  string decision = 4;           // concise reason (e.g., "geo+rdv+load")
+  string chosen_node_id = 5;     // selected target for forwarding
+  uint32 rtt_ms = 6;             // optional observed latency
+  bytes sig = 7;                 // optional hop signature
+}

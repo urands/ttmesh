@@ -1,0 +1,10 @@
+{
+  "folders": [
+    {
+      "path": "ttmesh"
+    }
+  ],
+  "settings": {
+    "go.useLanguageServer": true
+  }
+}

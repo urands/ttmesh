@@ -1,0 +1,18 @@
+{
+  // Cursor/VS Code Go settings to align debug vs release
+  "go.useLanguageServer": true,
+  "gopls": {
+    "ui.semanticTokens": true
+  },
+  // Default test flags (kept light; launch/tasks override as needed)
+  "go.testFlags": ["-v"],
+  // Keep build cache local to workspace
+  "go.toolsEnvVars": {
+    "GOPATH": "${env:GOPATH}"
+  },
+  // Optional formatting and linting preferences
+  "editor.formatOnSave": true,
+  "go.lintTool": "staticcheck",
+  "go.lintOnSave": "package"
+}
+

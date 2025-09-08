@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package ttmesh.proto;
+
+option go_package = "ttmesh/pkg/protocol/proto;ttmeshproto";
+
+import "common.proto";
+import "worker.proto";
+
+// Flow control: grant additional credits for streaming
+message FlowControl {
+  FlowScope scope = 1;     // PARAM/STEP/WORKFLOW
+  uint32 credit = 2;       // how many chunks allowed next
+}
+
+message Cancel {
+  string reason = 1;
+}
+
+// Control oneof: either FlowControl or Cancel
+message Control {
+  oneof kind {
+    FlowControl flow = 1;
+    Cancel cancel = 2;
+    PeerHello hello = 3;        // peer handshake (client->server)
+    PeerHelloAck hello_ack = 4; // handshake acknowledgement (server->client)
+    GetRoutes get_routes = 5;   // request: dump routing table/state
+    RoutesReply routes_reply = 6; // reply: routing table snapshot
+    GetIdentity get_identity = 7; // request: node identity
+    IdentityReply identity_reply = 8; // reply: node identity
+    // Worker control
+    WorkerRegister worker_register = 20; // register worker capabilities
+    WorkerAdvert worker_advert = 21;     // compact gossip advertisement
+    WorkerQuery worker_query = 22;       // search for workers
+    WorkerQueryReply worker_query_reply = 23; // reply with candidates
+  }
+}
+
+// Acknowledgement for a specific message id
+message Ack {
+  bytes message_id = 1;
+  AckCode code = 2;       // OK/NACK
+  string reason = 3;      // for NACK
+}
+
+// Placement leasing handshake
+message LeaseRequest {
+  string workflow_id = 1;
+  string step_id = 2;
+  uint32 timeout_ms = 3;
+}
+
+message LeaseReply {
+  bool granted = 1;
+  string lease_id = 2;
+  int64 lease_deadline_ms = 3;
+}
+
+// Handshake: signed identity announcement
+message PeerHello {
+  string node_name = 1;           // human-friendly name
+  string alg = 2;                 // "ed25519" etc
+  bytes pubkey = 3;               // public key bytes
+  bytes nonce = 4;                // random nonce
+  int64 ts_unix_ms = 5;           // timestamp (sender clock)
+  bytes sig = 6;                  // signature over transcript
+  PeerMeta meta = 7;              // optional initial peer meta
+}
+
+// Handshake acknowledgement
+message PeerHelloAck {
+  bool accepted = 1;
+  string peer_id = 2;             // canonical id (e.g., pk:ed25519:...)
+  string reason = 3;              // error message when not accepted
+  PeerMeta meta = 4;              // server-known meta (optional)
+}
+
+// Control: routing snapshot request/response
+message GetRoutes {}
+
+message PeerAdj {
+  string from = 1;
+  string to = 2;
+}
+
+message RouteCandidatePB {
+  string target = 1;         // "peer:<id>" or "route:<id>"
+  repeated string path = 2;  // path-vector
+  string next_hop = 3;
+  uint32 metric = 4;
+  string source = 5;         // gossip/manual/peer
+  string learned_from = 6;   // peer id
+  string health = 7;         // up/down/unknown
+  int64 updated_unix_ms = 8;
+  int64 expires_unix_ms = 9;
+}
+
+message RoutesReply {
+  repeated PeerMeta peers = 1;
+  repeated string targets = 2; // targets with route candidates
+  repeated RouteCandidatePB candidates = 3;
+  repeated PeerAdj adjacency = 4;
+}
+
+// Identity query/response
+message GetIdentity {}
+
+message IdentityReply {
+  string id = 1;
+  string node_name = 2;
+  string alg = 3;
+  bytes pubkey = 4;
+}
+
+
+
+
+

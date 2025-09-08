@@ -1,0 +1,31 @@
+app_name: ttmesh-node
+data_dir: ./data
+
+log:
+  level: info           # debug, info, warn, error
+  format: console       # console or json
+  outputs:              # stdout, stderr, or file path(s)
+    - stdout
+  development: true     # enables dev-friendly options and colors
+  rotation:             # used for file outputs
+    enable: false
+    filename: logs/ttmesh.log
+    max_size_mb: 50
+    max_backups: 3
+    max_age_days: 28
+  compress: true
+
+transports:
+  - kind: udp
+    listen:
+      - ":7777"
+    dial: []
+  # Example Windows named pipe (uncomment on Windows):
+  # - kind: winpipe
+  #   listen:
+  #     - "\\\.\\pipe\\ttmesh"
+  #   dial: []
+  # Example in-memory (tests/dev only):
+  # - kind: mem
+  #   listen: ["inproc://local"]
+  #   dial: []

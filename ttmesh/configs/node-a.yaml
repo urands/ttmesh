@@ -1,0 +1,24 @@
+app_name: ttmesh-node-a
+data_dir: ./data-a
+
+identity:
+  alg: ed25519
+  # private_key: ""       # base64url(no padding) of raw ed25519 private key bytes
+  # private_key_file: ""  # path to file with base64 or raw bytes
+
+log:
+  level: info
+  format: console
+  outputs:
+    - stdout
+  development: true
+
+transports:
+  - kind: udp
+    listen: [":7777"]
+    dial:
+      - address: "127.0.0.1:8888"
+  - kind: tcp
+    listen: [":7778"]
+    dial:
+      - address: "127.0.0.1:8889"

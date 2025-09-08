@@ -1,0 +1,24 @@
+app_name: ttmesh-node-b
+data_dir: ./data-b
+
+identity:
+  alg: ed25519
+  # private_key: ""
+  # private_key_file: ""
+
+log:
+  level: info
+  format: console
+  outputs:
+    - stdout
+  development: true
+
+transports:
+  - kind: udp
+    listen: [":8888"]
+    dial:
+      - address: "127.0.0.1:9999"   # to node-c (UDP)
+  - kind: tcp
+    listen: [":8889"]
+    dial:
+      - address: "127.0.0.1:9998"   # to node-c (TCP)

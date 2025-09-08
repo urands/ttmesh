@@ -1,0 +1,180 @@
+// proto definitions for ttmesh (optional gRPC layer)
+syntax = "proto3";
+
+package ttmesh.proto;
+
+option go_package = "ttmesh/pkg/protocol/proto;ttmeshproto";
+
+import "common.proto";
+import "routing.proto";
+import "task.proto";
+import "tiny.proto";
+
+
+message FeatureFlags {
+  bool supports_stream_input  = 1;   // ParamChunk вход
+  bool supports_stream_output = 2;   // Result чанками
+  bool supports_flow_control  = 3;   // кредитная модель
+  bool supports_compression   = 4;   // gzip/zstd и т.д.
+  bool supports_quic          = 5;   // HTTP/3/QUIC transport
+  bool supports_grpc          = 6;   // gRPC/HTTP2 transport
+  bool supports_shm           = 7;   // shared memory data-plane
+  bool supports_mmap          = 8;   // mmap files data-plane
+  bool supports_zero_copy     = 9;   // zero-copy внутри узла
+  map<string, string> ext     = 50;  // произвольные фичи и версии
+}
+
+message ResourceCapacity {
+  uint32 cpu_millicores   = 1;   // суммарно/доступно
+  uint64 mem_bytes        = 2;
+  uint32 gpu_count        = 3;
+  uint64 vram_bytes       = 4;
+  map<string, string> ext = 50;  // например, NUMA/сокеты
+}
+
+message GpuInfo {
+  string vendor           = 1;   // "nvidia", "amd", "intel"
+  string model            = 2;   // "A100", "MI250", "Arc"
+  string compute_cap      = 3;   // "8.0", "sm_80", etc.
+  uint64 vram_bytes       = 4;
+  map<string, string> ext = 50;  // "nvenc": "true", ...
+}
+
+message AccelInfo {
+  string kind             = 1;   // "tpu", "fpga", "vpu", ...
+  string model            = 2;
+  map<string, string> ext = 50;
+}
+
+message StorageMount {
+  string id               = 1;   // логический id
+  string kind             = 2;   // "ssd", "hdd", "nvme", "s3", "nfs"
+  string path             = 3;   // локальный путь/URI
+  uint64 capacity_bytes   = 4;
+  uint64 free_bytes       = 5;
+  map<string, string> tags= 50;  // "region", "tier", ...
+}
+
+message NetworkEndpoint {
+  string scheme           = 1;   // "grpc+tcp", "grpc+uds", "quic", "shm"
+  string address          = 2;   // "127.0.0.1:50051", "unix:///tmp/tt.sock"
+  map<string, string> params = 3; // "alpn":"h3", "mtu":"1450", ...
+}
+
+message ResourceReq {
+  uint32 cpu_millicores   = 1;   // требуемый минимум
+  uint64 mem_bytes        = 2;
+  uint32 gpu_count        = 3;
+  string gpu_class        = 4;   // "nvidia", "any", "A100"
+  uint64 vram_bytes       = 5;
+  repeated string accelerators = 6; // "tpu", "fpga", ...
+  map<string, string> ext = 50;
+}
+
+message FunctionDesc {
+  // Человекочитаемая идентичность
+  string name             = 1;   // уникальное имя задачи
+  string version          = 2;   // семвер/тег
+  // Стабильная идентичность реализации (одинакова у идентичных воркеров)
+  string stable_id        = 10;  // канонический ID (опц.)
+  string hash_alg         = 11;  // "sha256", "blake3"
+  bytes  hash             = 12;  // дайджест по канонизированному описанию/пакету
+
+  bool stream_input       = 3;
+  bool stream_output      = 4;
+  uint32 priority_default = 5;   // 0..255 по умолчанию
+  ResourceReq min_req     = 6;   // минимальные требования
+  map<string, string> meta= 50;  // произвольные аннотации (DAG role, ABI, lang, etc.)
+}
+
+message WorkerRegister {
+  string worker_id                 = 1;   // стабильный ID воркера
+  NodeRef self                     = 2;   // собственная ссылка/адрес
+  repeated FunctionDesc functions  = 3;   // список поддерживаемых задач
+  ResourceCapacity capacity_total  = 4;   // общая вместимость
+  ResourceCapacity capacity_free   = 5;   // доступно сейчас (hint)
+  repeated GpuInfo gpus            = 6;   // описания GPU (если есть)
+  repeated AccelInfo accels        = 7;   // доп. ускорители
+  repeated StorageMount storage    = 8;   // доступные стораджи
+  repeated NetworkEndpoint endpoints = 9; // как к воркеру достучаться
+  FeatureFlags features            = 10;  // флаги возможностей
+  string region                    = 11;  // логический регион
+  string zone                      = 12;  // зона/стойка
+  string geo_hash                  = 13;  // геопривязка (для near-data)
+  map<string, string> labels       = 14;  // произвольные лейблы/теги
+  bytes public_key                 = 15;  // опционально: верификация
+  map<string, string> auth         = 16;  // токены/подписи (если нужно)
+}
+
+// Объявление (для распространения по mesh) — компактное
+message WorkerAdvert {
+  NodeRef self                     = 1;
+  repeated FunctionDesc functions  = 2;  // функции с заполненными hash/stable_id
+  int64 ts_unix_ms                 = 3;
+}
+
+// Запрос поиска воркера по функции
+message WorkerQuery {
+  string name       = 1;   // может быть пустым, если ищем по хэшу
+  string version    = 2;   // селектор семвер (опц.)
+  string hash_alg   = 3;
+  bytes  hash       = 4;
+  map<string,string> labels = 5; // ограничения (регион, capability)
+}
+
+message WorkerEndpoint {
+  NodeRef node              = 1;
+  repeated NetworkEndpoint endpoints = 2;
+  ResourceCapacity capacity_free     = 3; // hint
+  map<string,string> labels          = 4;
+}
+
+message WorkerQueryReply {
+  FunctionDesc function      = 1;            // совпавшая функция
+  repeated WorkerEndpoint candidates = 2;    // провайдеры
+}
+
+message WorkerUpdate {
+  string worker_id                  = 1;
+  // Поля-дельты (любое может быть пустым)
+  repeated FunctionDesc add_functions = 2;
+  repeated string remove_functions    = 3;
+  ResourceCapacity capacity_total     = 4;
+  ResourceCapacity capacity_free      = 5;
+  repeated StorageMount storage       = 6;
+  repeated NetworkEndpoint endpoints  = 7;
+  FeatureFlags features               = 8;
+  map<string, string> labels_set      = 9;
+  repeated string labels_del          = 10;
+}
+
+message WorkerHeartbeat {
+  string worker_id           = 1;
+  // моментальные метрики загрузки
+  double cpu_util            = 2;   // 0..1
+  double mem_util            = 3;   // 0..1
+  double gpu_util            = 4;   // 0..1 (усреднённо)
+  uint32 running_tasks       = 5;
+  double rx_mbps             = 6;   // входящий трафик
+  double tx_mbps             = 7;   // исходящий трафик
+  map<string, double> custom = 50;  // любые дополнительные метрики
+}
+
+message WorkerDeregister {
+  string worker_id           = 1;
+  string reason              = 2;   // человекочитаемая причина
+}
+
+// Политика доступа: допускаемые клиенты и требования подписи
+message AuthPolicy {
+  // Требуется ли подпись запросов (на уровне сессии/вызова)
+  bool require_signature     = 1;
+  // Список разрешённых клиентов (peerId = pk:ed25519:...)
+  repeated string allowed_peer_ids = 2;
+  // Альтернативно, список разрешённых публичных ключей
+  repeated bytes allowed_pubkeys   = 3;
+  // Дополнительные параметры
+  map<string,string> ext     = 50;
+}
+
+

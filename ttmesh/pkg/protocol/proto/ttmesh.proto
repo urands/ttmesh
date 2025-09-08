@@ -1,0 +1,61 @@
+// proto definitions for ttmesh (optional gRPC layer)
+syntax = "proto3";
+
+package ttmesh.proto;
+
+option go_package = "ttmesh/pkg/protocol/proto;ttmeshproto";
+
+import "common.proto";
+import "routing.proto";
+import "task.proto";
+import "control.proto";
+import "tiny.proto";
+
+// Fixed-style header carried in gRPC representation
+message Header {
+  uint32 version = 1;            // protocol version
+  MessageType type = 2;          // message kind
+  uint32 flags = 3;              // bitmask flags
+  uint32 priority = 4;           // 0..255
+  bytes correlation_id = 5;      // 16 bytes UUID-like id
+  NodeRef source = 6;            // source node
+  NodeRef dest = 7;              // destination node (transport-level)
+  NodeRef reply_to = 8;          // where to send final result
+  uint32 frag_index = 9;         // fragment index (optional)
+  uint32 frag_total = 10;        // total fragments (optional)
+  bytes message_id = 11;         // message id (ULID/UUID)
+  bytes trace_id = 12;           // tracing id (optional)
+  int64 created_unix_ms = 13;    // creation time
+  map<string,string> tags = 14;  // arbitrary tags
+  Codec codec = 15;              // payload codec hint
+  Compression compression = 16;  // payload compression hint
+}
+
+// Envelope is a structured container for both control and task data.
+// It carries routing cursors (step_id/next_step), hop breadcrumbs and oneof body.
+message Envelope {
+  Header header = 1;
+  Metadata meta = 2;                 // workflow/routing cursor
+  repeated HopMeta hops = 3;         // last N routing decisions
+  BusHeader bus = 4;                 // minimal bus header (optional)
+
+  oneof body {
+    Invoke invoke = 10;
+    ParamChunk chunk = 11;
+    Result result = 12;
+    Ack ack = 13;
+    Control control = 14;
+    LeaseRequest lease_req = 15;
+    LeaseReply lease_rep = 16;
+    bytes raw = 17;                  // fallback opaque payload
+    TinyResult tiny_result = 18;     // compact response form
+    SessionInit session_init = 19;   // cache baseline context on receiver
+    SessionClose session_close = 20; // drop cached context
+  }
+}
+
+// Mesh is the single-channel exchange. Nodes can multiplex
+// control and task messages over the same stream.
+service Mesh {
+  rpc Exchange(stream Envelope) returns (stream Envelope);
+}

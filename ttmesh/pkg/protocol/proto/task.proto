@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package ttmesh.proto;
+
+option go_package = "ttmesh/pkg/protocol/proto;ttmeshproto";
+
+import "common.proto";
+
+// Input parameter declaration
+message ParamDescriptor {
+  string name = 1;              // unique within invoke
+  string media_type = 2;        // MIME type
+  string schema_ref = 3;        // optional schema link
+  bool streamed = 4;            // true => ParamChunk will arrive
+  uint64 total_size = 5;        // total bytes if known
+  bool required = 6;            // whether required
+  string integrity_alg = 7;     // "sha256"/"blake3"
+  bytes integrity = 8;          // hash of full param (optional)
+}
+
+// Invoke specification: either inline_args, blobs, or later chunks
+message Invoke {
+  repeated ParamDescriptor params = 1;              // input declarations
+  map<string, bytes> inline_args = 2;               // small inputs
+  map<string, BlobRef> blobs = 3;                   // large inputs by reference
+}
+
+// Streaming chunk for a specific parameter
+message ParamChunk {
+  string param_name = 1;
+  uint64 index = 2;      // 0..N
+  uint64 offset = 3;     // byte offset
+  bool last = 4;         // last chunk of this param
+  bytes data = 5;        // payload
+  uint32 crc32 = 6;      // optional per-chunk crc
+}
+
+// Named output: inline data or blob reference
+message Output {
+  string name = 1;
+  oneof payload {
+    bytes inline_data = 2;
+    BlobRef blob = 3;
+  }
+}
+
+// Rich result with status, logs and metrics
+message Result {
+  Status status = 1;                  // OK/PARTIAL/FAILED/...
+  repeated Output outputs = 2;        // step outputs
+  repeated LogLine logs = 3;          // logs (can be PARTIAL)
+  Metrics metrics = 4;                // metrics
+  string error_code = 5;              // error code when failed
+  string error_msg = 6;               // error message
+  bool final = 7;                     // final for current step_id
+  float progress = 8;                 // 0..1 (optional)
+}

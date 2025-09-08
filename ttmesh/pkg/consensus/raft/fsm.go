@@ -1,0 +1,2 @@
+// Raft FSM
+package raft
