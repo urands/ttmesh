@@ -22,3 +22,7 @@ transports:
     listen: [":8889"]
     dial:
       - address: "127.0.0.1:9998"   # to node-c (TCP)
+  - kind: quic
+    listen: [":4444"]
+    dial:
+      - address: "127.0.0.1:4455"   # to node-c (QUIC)

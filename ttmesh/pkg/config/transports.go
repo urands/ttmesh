@@ -8,6 +8,10 @@ package config
 //     dial:
 //       - address: "10.0.0.2:7777"
 //         peer_id: "worker-1"
+//   - kind: quic
+//     listen: [":4433"]
+//     dial:
+//       - address: "10.0.0.2:4433"
 //   - kind: winpipe
 //     listen: ["\\\\.\\pipe\\ttmesh"]
 //   - kind: mem
@@ -25,4 +29,3 @@ type PeerDialConfig struct {
     Address string `mapstructure:"address"`
     PeerID  string `mapstructure:"peer_id"`
 }
-

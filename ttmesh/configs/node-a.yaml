@@ -22,3 +22,7 @@ transports:
     listen: [":7778"]
     dial:
       - address: "127.0.0.1:8889"
+  - kind: quic
+    listen: [":4433"]
+    dial:
+      - address: "127.0.0.1:4444"

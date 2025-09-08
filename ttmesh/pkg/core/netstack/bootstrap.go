@@ -13,6 +13,7 @@ import (
     ttmeshproto "ttmesh/pkg/protocol/proto"
     "ttmesh/pkg/transport"
     "ttmesh/pkg/transport/mem"
+    tquic "ttmesh/pkg/transport/quic"
     ttcp "ttmesh/pkg/transport/tcp"
     "ttmesh/pkg/transport/udp"
 )
@@ -84,6 +85,8 @@ func NewByKind(kind string) (transport.Transport, error) {
         return udp.New(), nil
     case "tcp":
         return ttcp.New(), nil
+    case "quic", "h3", "http3":
+        return tquic.New(), nil
     case "mem", "inproc", "shared":
         return mem.New(), nil
     case "winpipe", "pipe":

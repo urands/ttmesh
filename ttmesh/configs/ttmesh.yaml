@@ -20,6 +20,11 @@ transports:
     listen:
       - ":7777"
     dial: []
+  # Example QUIC (HTTP/3) listener:
+  # - kind: quic
+  #   listen:
+  #     - ":4433"
+  #   dial: []
   # Example Windows named pipe (uncomment on Windows):
   # - kind: winpipe
   #   listen:
