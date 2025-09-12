@@ -16,6 +16,7 @@ import (
     "ttmesh/pkg/router"
     "ttmesh/pkg/identity"
     "ttmesh/pkg/pipeline"
+    "ttmesh/pkg/registry"
 )
 
 // run is the main entry point after CLI parsing.
@@ -57,6 +58,7 @@ func run(opts Options) int {
     kv := memkv.New(memkv.Options{})
     defer kv.Close()
     ps := peers.NewStore(kv)
+    reg := registry.NewStore(kv)
 
     // Initialize router with local node id
     rtr := router.New(ps, mgr, transport.PeerID(cfg.NodeID))
@@ -70,7 +72,7 @@ func run(opts Options) int {
         BackoffMax:     time.Duration(cfg.Net.DialBackoffMaxMS) * time.Millisecond,
         BackoffJitter:  time.Duration(cfg.Net.DialBackoffJitterMS) * time.Millisecond,
     }
-    _, _, err = netstack.StartFromConfig(ctx, cfg.Transports, mgr, ps, transport.PeerID(cfg.NodeID), rtr, priv, cfg.AppName, pl, nsopts)
+    _, _, err = netstack.StartFromConfig(ctx, cfg.Transports, mgr, ps, reg, transport.PeerID(cfg.NodeID), rtr, priv, cfg.AppName, pl, nsopts)
     if err != nil {
         zap.L().Error("failed to start transports", zap.Error(err))
         return 1

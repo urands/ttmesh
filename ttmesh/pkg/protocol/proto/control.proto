@@ -6,6 +6,7 @@ option go_package = "ttmesh/pkg/protocol/proto;ttmeshproto";
 
 import "common.proto";
 import "worker.proto";
+import "task_registry.proto";
 
 // Flow control: grant additional credits for streaming
 message FlowControl {
@@ -33,6 +34,13 @@ message Control {
     WorkerAdvert worker_advert = 21;     // compact gossip advertisement
     WorkerQuery worker_query = 22;       // search for workers
     WorkerQueryReply worker_query_reply = 23; // reply with candidates
+    // Task capability control (worker <-> node)
+    TaskRegister task_register = 24;         // register one or multiple tasks
+    TaskRegisterAck task_register_ack = 25;  // ack/nack for registration
+    TaskUpdate task_update = 26;             // add/update/remove tasks
+    TaskDeregister task_deregister = 27;     // deregister tasks or all
+    TaskListWorkers task_list_workers = 28;  // list registered workers
+    TaskListWorkersReply task_list_workers_reply = 29; // list response
   }
 }
 
@@ -111,8 +119,6 @@ message IdentityReply {
   string alg = 3;
   bytes pubkey = 4;
 }
-
-
 
 
 

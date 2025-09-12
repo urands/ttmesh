@@ -23,6 +23,7 @@ func main() {
     addr := flag.String("addr", ":7777", "node address to connect to")
     name := flag.String("name", "ttmesh-ctl", "logical node name for hello")
     timeout := flag.Duration("timeout", 5*time.Second, "dial/handshake timeout")
+    listWorkers := flag.Bool("list-workers", false, "list registered workers")
     flag.Parse()
 
     ctx, cancel := context.WithTimeout(context.Background(), *timeout)
@@ -58,6 +59,14 @@ func main() {
     id := waitIdentity(st, 3*time.Second)
     if id != nil {
         fmt.Printf("Connected Node: id=%s name=%s pubkey=%s\n\n", id.GetId(), id.GetNodeName(), base64.RawURLEncoding.EncodeToString(id.GetPubkey()))
+    }
+
+    if *listWorkers {
+        sendCtl(st, &ttmeshproto.Control{Kind: &ttmeshproto.Control_TaskListWorkers{TaskListWorkers: &ttmeshproto.TaskListWorkers{IncludeTasks: true}}})
+        lrep := waitListWorkers(st, 5*time.Second)
+        if lrep == nil { fatalf("timeout waiting for list workers reply") }
+        printWorkers(lrep)
+        return
     }
 
     // Send GetRoutes and print
@@ -99,6 +108,30 @@ func waitRoutes(st transport.Stream, d time.Duration) *ttmeshproto.RoutesReply {
         c := env.GetControl(); if c == nil { continue }
         if rep := c.GetRoutesReply(); rep != nil { return rep }
     }
+}
+
+func waitListWorkers(st transport.Stream, d time.Duration) *ttmeshproto.TaskListWorkersReply {
+    deadline := time.Now().Add(d)
+    for {
+        if time.Now().After(deadline) { return nil }
+        b, err := st.RecvBytes(); if err != nil { return nil }
+        var env ttmeshproto.Envelope
+        if proto.Unmarshal(b, &env) != nil { continue }
+        c := env.GetControl(); if c == nil { continue }
+        if rep := c.GetTaskListWorkersReply(); rep != nil { return rep }
+    }
+}
+
+func printWorkers(r *ttmeshproto.TaskListWorkersReply) {
+    fmt.Println("Workers:")
+    for _, w := range r.GetWorkers() {
+        ep := ""; if len(w.GetEndpoints())>0 { ep = w.GetEndpoints()[0].GetAddress() }
+        fmt.Printf("- %s labels=%v endpoint=%s tasks=%d\n", w.GetWorkerId(), w.GetLabels(), ep, len(w.GetTasks()))
+        for _, t := range w.GetTasks() {
+            fmt.Printf("    * %s@%s stream[in:%v out:%v]\n", t.GetName(), t.GetVersion(), t.GetStreamInput(), t.GetStreamOutput())
+        }
+    }
+    if n := r.GetNextPageToken(); n != "" { fmt.Println("NextPageToken:", n) }
 }
 
 func printRoutes(r *ttmeshproto.RoutesReply) {

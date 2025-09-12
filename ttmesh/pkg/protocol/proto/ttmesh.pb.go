@@ -42,6 +42,11 @@ type Header struct {
 	Tags          map[string]string      `protobuf:"bytes,14,rep,name=tags,proto3" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // arbitrary tags
 	Codec         Codec                  `protobuf:"varint,15,opt,name=codec,proto3,enum=ttmesh.proto.Codec" json:"codec,omitempty"`                                                // payload codec hint
 	Compression   Compression            `protobuf:"varint,16,opt,name=compression,proto3,enum=ttmesh.proto.Compression" json:"compression,omitempty"`                              // payload compression hint
+	// Direct peer processing result (simple OK/NOT OK) sent back
+	// as a lightweight immediate response between directly connected peers.
+	// This is distinct from worker-level Ack/Nack and is set by the receiver
+	// after the envelope is processed in its local queue.
+	DirectStatus  *Status `protobuf:"varint,17,opt,name=direct_status,json=directStatus,proto3,enum=ttmesh.proto.Status,oneof" json:"direct_status,omitempty"` // ST_OK or ST_FAILED when present
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -186,6 +191,13 @@ func (x *Header) GetCompression() Compression {
 		return x.Compression
 	}
 	return Compression_COMP_NONE
+}
+
+func (x *Header) GetDirectStatus() Status {
+	if x != nil && x.DirectStatus != nil {
+		return *x.DirectStatus
+	}
+	return Status_ST_OK
 }
 
 // Envelope is a structured container for both control and task data.
@@ -454,7 +466,7 @@ const file_ttmesh_proto_rawDesc = "" +
 	"\n" +
 	"\fttmesh.proto\x12\fttmesh.proto\x1a\fcommon.proto\x1a\rrouting.proto\x1a\n" +
 	"task.proto\x1a\rcontrol.proto\x1a\n" +
-	"tiny.proto\"\xab\x05\n" +
+	"tiny.proto\"\xfd\x05\n" +
 	"\x06Header\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12-\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x19.ttmesh.proto.MessageTypeR\x04type\x12\x14\n" +
@@ -475,10 +487,12 @@ const file_ttmesh_proto_rawDesc = "" +
 	"\x0fcreated_unix_ms\x18\r \x01(\x03R\rcreatedUnixMs\x122\n" +
 	"\x04tags\x18\x0e \x03(\v2\x1e.ttmesh.proto.Header.TagsEntryR\x04tags\x12)\n" +
 	"\x05codec\x18\x0f \x01(\x0e2\x13.ttmesh.proto.CodecR\x05codec\x12;\n" +
-	"\vcompression\x18\x10 \x01(\x0e2\x19.ttmesh.proto.CompressionR\vcompression\x1a7\n" +
+	"\vcompression\x18\x10 \x01(\x0e2\x19.ttmesh.proto.CompressionR\vcompression\x12>\n" +
+	"\rdirect_status\x18\x11 \x01(\x0e2\x14.ttmesh.proto.StatusH\x00R\fdirectStatus\x88\x01\x01\x1a7\n" +
 	"\tTagsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf6\x05\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x10\n" +
+	"\x0e_direct_status\"\xf6\x05\n" +
 	"\bEnvelope\x12,\n" +
 	"\x06header\x18\x01 \x01(\v2\x14.ttmesh.proto.HeaderR\x06header\x12*\n" +
 	"\x04meta\x18\x02 \x01(\v2\x16.ttmesh.proto.MetadataR\x04meta\x12)\n" +
@@ -522,19 +536,20 @@ var file_ttmesh_proto_goTypes = []any{
 	(*NodeRef)(nil),      // 4: ttmesh.proto.NodeRef
 	(Codec)(0),           // 5: ttmesh.proto.Codec
 	(Compression)(0),     // 6: ttmesh.proto.Compression
-	(*Metadata)(nil),     // 7: ttmesh.proto.Metadata
-	(*HopMeta)(nil),      // 8: ttmesh.proto.HopMeta
-	(*BusHeader)(nil),    // 9: ttmesh.proto.BusHeader
-	(*Invoke)(nil),       // 10: ttmesh.proto.Invoke
-	(*ParamChunk)(nil),   // 11: ttmesh.proto.ParamChunk
-	(*Result)(nil),       // 12: ttmesh.proto.Result
-	(*Ack)(nil),          // 13: ttmesh.proto.Ack
-	(*Control)(nil),      // 14: ttmesh.proto.Control
-	(*LeaseRequest)(nil), // 15: ttmesh.proto.LeaseRequest
-	(*LeaseReply)(nil),   // 16: ttmesh.proto.LeaseReply
-	(*TinyResult)(nil),   // 17: ttmesh.proto.TinyResult
-	(*SessionInit)(nil),  // 18: ttmesh.proto.SessionInit
-	(*SessionClose)(nil), // 19: ttmesh.proto.SessionClose
+	(Status)(0),          // 7: ttmesh.proto.Status
+	(*Metadata)(nil),     // 8: ttmesh.proto.Metadata
+	(*HopMeta)(nil),      // 9: ttmesh.proto.HopMeta
+	(*BusHeader)(nil),    // 10: ttmesh.proto.BusHeader
+	(*Invoke)(nil),       // 11: ttmesh.proto.Invoke
+	(*ParamChunk)(nil),   // 12: ttmesh.proto.ParamChunk
+	(*Result)(nil),       // 13: ttmesh.proto.Result
+	(*Ack)(nil),          // 14: ttmesh.proto.Ack
+	(*Control)(nil),      // 15: ttmesh.proto.Control
+	(*LeaseRequest)(nil), // 16: ttmesh.proto.LeaseRequest
+	(*LeaseReply)(nil),   // 17: ttmesh.proto.LeaseReply
+	(*TinyResult)(nil),   // 18: ttmesh.proto.TinyResult
+	(*SessionInit)(nil),  // 19: ttmesh.proto.SessionInit
+	(*SessionClose)(nil), // 20: ttmesh.proto.SessionClose
 }
 var file_ttmesh_proto_depIdxs = []int32{
 	3,  // 0: ttmesh.proto.Header.type:type_name -> ttmesh.proto.MessageType
@@ -544,27 +559,28 @@ var file_ttmesh_proto_depIdxs = []int32{
 	2,  // 4: ttmesh.proto.Header.tags:type_name -> ttmesh.proto.Header.TagsEntry
 	5,  // 5: ttmesh.proto.Header.codec:type_name -> ttmesh.proto.Codec
 	6,  // 6: ttmesh.proto.Header.compression:type_name -> ttmesh.proto.Compression
-	0,  // 7: ttmesh.proto.Envelope.header:type_name -> ttmesh.proto.Header
-	7,  // 8: ttmesh.proto.Envelope.meta:type_name -> ttmesh.proto.Metadata
-	8,  // 9: ttmesh.proto.Envelope.hops:type_name -> ttmesh.proto.HopMeta
-	9,  // 10: ttmesh.proto.Envelope.bus:type_name -> ttmesh.proto.BusHeader
-	10, // 11: ttmesh.proto.Envelope.invoke:type_name -> ttmesh.proto.Invoke
-	11, // 12: ttmesh.proto.Envelope.chunk:type_name -> ttmesh.proto.ParamChunk
-	12, // 13: ttmesh.proto.Envelope.result:type_name -> ttmesh.proto.Result
-	13, // 14: ttmesh.proto.Envelope.ack:type_name -> ttmesh.proto.Ack
-	14, // 15: ttmesh.proto.Envelope.control:type_name -> ttmesh.proto.Control
-	15, // 16: ttmesh.proto.Envelope.lease_req:type_name -> ttmesh.proto.LeaseRequest
-	16, // 17: ttmesh.proto.Envelope.lease_rep:type_name -> ttmesh.proto.LeaseReply
-	17, // 18: ttmesh.proto.Envelope.tiny_result:type_name -> ttmesh.proto.TinyResult
-	18, // 19: ttmesh.proto.Envelope.session_init:type_name -> ttmesh.proto.SessionInit
-	19, // 20: ttmesh.proto.Envelope.session_close:type_name -> ttmesh.proto.SessionClose
-	1,  // 21: ttmesh.proto.Mesh.Exchange:input_type -> ttmesh.proto.Envelope
-	1,  // 22: ttmesh.proto.Mesh.Exchange:output_type -> ttmesh.proto.Envelope
-	22, // [22:23] is the sub-list for method output_type
-	21, // [21:22] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	7,  // 7: ttmesh.proto.Header.direct_status:type_name -> ttmesh.proto.Status
+	0,  // 8: ttmesh.proto.Envelope.header:type_name -> ttmesh.proto.Header
+	8,  // 9: ttmesh.proto.Envelope.meta:type_name -> ttmesh.proto.Metadata
+	9,  // 10: ttmesh.proto.Envelope.hops:type_name -> ttmesh.proto.HopMeta
+	10, // 11: ttmesh.proto.Envelope.bus:type_name -> ttmesh.proto.BusHeader
+	11, // 12: ttmesh.proto.Envelope.invoke:type_name -> ttmesh.proto.Invoke
+	12, // 13: ttmesh.proto.Envelope.chunk:type_name -> ttmesh.proto.ParamChunk
+	13, // 14: ttmesh.proto.Envelope.result:type_name -> ttmesh.proto.Result
+	14, // 15: ttmesh.proto.Envelope.ack:type_name -> ttmesh.proto.Ack
+	15, // 16: ttmesh.proto.Envelope.control:type_name -> ttmesh.proto.Control
+	16, // 17: ttmesh.proto.Envelope.lease_req:type_name -> ttmesh.proto.LeaseRequest
+	17, // 18: ttmesh.proto.Envelope.lease_rep:type_name -> ttmesh.proto.LeaseReply
+	18, // 19: ttmesh.proto.Envelope.tiny_result:type_name -> ttmesh.proto.TinyResult
+	19, // 20: ttmesh.proto.Envelope.session_init:type_name -> ttmesh.proto.SessionInit
+	20, // 21: ttmesh.proto.Envelope.session_close:type_name -> ttmesh.proto.SessionClose
+	1,  // 22: ttmesh.proto.Mesh.Exchange:input_type -> ttmesh.proto.Envelope
+	1,  // 23: ttmesh.proto.Mesh.Exchange:output_type -> ttmesh.proto.Envelope
+	23, // [23:24] is the sub-list for method output_type
+	22, // [22:23] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_ttmesh_proto_init() }
@@ -577,6 +593,7 @@ func file_ttmesh_proto_init() {
 	file_task_proto_init()
 	file_control_proto_init()
 	file_tiny_proto_init()
+	file_ttmesh_proto_msgTypes[0].OneofWrappers = []any{}
 	file_ttmesh_proto_msgTypes[1].OneofWrappers = []any{
 		(*Envelope_Invoke)(nil),
 		(*Envelope_Chunk)(nil),

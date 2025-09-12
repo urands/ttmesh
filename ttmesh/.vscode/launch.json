@@ -40,6 +40,22 @@
       "program": "${workspaceFolder}",
       "cwd": "${workspaceFolder}",
       "args": ["-v"]
+    },
+    {
+      "name": "Debug Client (connect 127.0.0.1:7777)",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/ttmesh-client",
+      "cwd": "${workspaceFolder}",
+      "buildFlags": "-gcflags=all=\"-N -l\"",
+      "args": [
+        "-kind", "udp",
+        "-addr", "127.0.0.1:7777",
+        "-name", "client",
+        "-src", "client1"
+      ],
+      "env": {}
     }
   ]
 }

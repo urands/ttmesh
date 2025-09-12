@@ -5,13 +5,14 @@ import (
 
     "go.uber.org/zap"
 
-    "ttmesh/pkg/node/peering"
+    corepeering "ttmesh/pkg/core/peering"
     "ttmesh/pkg/peers"
     ttmeshproto "ttmesh/pkg/protocol/proto"
+    "ttmesh/pkg/registry"
     "ttmesh/pkg/transport"
 )
 
-func acceptLoop(ctx context.Context, mgr *transport.Manager, l transport.Listener, ps *peers.Store, localID transport.PeerID, rtr interface{ SendBytesToPeer(context.Context, transport.PeerID, []byte) error }, pl interface{ EnqueueProto(transport.PeerID, *ttmeshproto.Envelope, []byte) }, nodeName string, pub []byte) {
+func acceptLoop(ctx context.Context, mgr *transport.Manager, l transport.Listener, ps *peers.Store, reg *registry.Store, localID transport.PeerID, rtr interface{ SendBytesToPeer(context.Context, transport.PeerID, []byte) error }, pl interface{ EnqueueProto(transport.PeerID, *ttmeshproto.Envelope, []byte) }, nodeName string, pub []byte) {
     for {
         s, err := l.Accept(ctx)
         if err != nil {
@@ -34,7 +35,6 @@ func acceptLoop(ctx context.Context, mgr *transport.Manager, l transport.Listene
             if localID != "" { ps.AddConnectedDirect(localID, peer.ID) }
             zap.L().Info("direct link", zap.String("local", string(localID)), zap.String("peer", string(peer.ID)))
         }
-        go peering.HandleSession(ctx, mgr, ps, rtr, localID, s, pl, nodeName, pub)
+        go corepeering.HandleSession(ctx, mgr, ps, reg, rtr, localID, s, pl, nodeName, pub)
     }
 }
-

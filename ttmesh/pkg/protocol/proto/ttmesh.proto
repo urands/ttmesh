@@ -29,6 +29,11 @@ message Header {
   map<string,string> tags = 14;  // arbitrary tags
   Codec codec = 15;              // payload codec hint
   Compression compression = 16;  // payload compression hint
+  // Direct peer processing result (simple OK/NOT OK) sent back
+  // as a lightweight immediate response between directly connected peers.
+  // This is distinct from worker-level Ack/Nack and is set by the receiver
+  // after the envelope is processed in its local queue.
+  optional Status direct_status = 17; // ST_OK or ST_FAILED when present
 }
 
 // Envelope is a structured container for both control and task data.

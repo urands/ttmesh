@@ -7,13 +7,14 @@ import (
 
     "go.uber.org/zap"
 
-	"ttmesh/pkg/node/peering"
+    corepeering "ttmesh/pkg/core/peering"
 	"ttmesh/pkg/peers"
 	ttmeshproto "ttmesh/pkg/protocol/proto"
+	"ttmesh/pkg/registry"
 	"ttmesh/pkg/transport"
 )
 
-func dialLoop(ctx context.Context, tr transport.Transport, mgr *transport.Manager, ps *peers.Store, localID transport.PeerID, rtr interface{ SendBytesToPeer(context.Context, transport.PeerID, []byte) error }, priv ed25519.PrivateKey, nodeName string, pl interface{ EnqueueProto(transport.PeerID, *ttmeshproto.Envelope, []byte) }, address, peerID string, opts Options) {
+func dialLoop(ctx context.Context, tr transport.Transport, mgr *transport.Manager, ps *peers.Store, reg *registry.Store, localID transport.PeerID, rtr interface{ SendBytesToPeer(context.Context, transport.PeerID, []byte) error }, priv ed25519.PrivateKey, nodeName string, pl interface{ EnqueueProto(transport.PeerID, *ttmeshproto.Envelope, []byte) }, address, peerID string, opts Options) {
     pid := transport.PeerID(peerID)
     if pid == "" { pid = transport.PeerID("temp:" + tr.Kind().String() + ":" + address) }
     peer := transport.PeerInfo{ID: pid, Addr: address}
@@ -52,7 +53,7 @@ func dialLoop(ctx context.Context, tr transport.Transport, mgr *transport.Manage
             zap.L().Warn("send hello on dial failed", zap.Error(err))
         }
         if accepted {
-            peering.HandleSession(ctx, mgr, ps, rtr, localID, sess, pl, nodeName, priv.Public().(ed25519.PublicKey))
+            corepeering.HandleSession(ctx, mgr, ps, reg, rtr, localID, sess, pl, nodeName, priv.Public().(ed25519.PublicKey))
             continue
         }
         _ = sess.Close()

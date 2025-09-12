@@ -50,11 +50,25 @@ func (p *Pipeline) EnqueueProto(src transport.PeerID, env *ttmeshproto.Envelope,
 }
 
 func classify(e *ttmeshproto.Envelope) priocq.Class {
+    // Prefer body-based classification for better fidelity
+    if e.GetControl() != nil {
+        return priocq.L0Control
+    }
+    if e.GetRaw() != nil {
+        return priocq.L2Bulk
+    }
+    if e.GetChunk() != nil {
+        return priocq.L2Bulk
+    }
+    if e.GetResult() != nil || e.GetTinyResult() != nil || e.GetInvoke() != nil {
+        if pl := payloadLen(e); pl > 64*1024 { return priocq.L2Bulk }
+        return priocq.L1Realtime
+    }
+    // Fallback on header type when body is unknown
     switch e.GetHeader().GetType() {
     case ttmeshproto.MessageType_MT_CONTROL:
         return priocq.L0Control
     case ttmeshproto.MessageType_MT_TASK, ttmeshproto.MessageType_MT_RESULT, ttmeshproto.MessageType_MT_DAG_FRAGMENT:
-        // Realtime vs bulk can be refined by size/flags; use payload length heuristic
         if pl := payloadLen(e); pl > 64*1024 { return priocq.L2Bulk }
         return priocq.L1Realtime
     default:
@@ -112,4 +126,3 @@ func MarshalEnvelope(e *ttmeshproto.Envelope) []byte {
     b, _ := proto.Marshal(e)
     return b
 }
-

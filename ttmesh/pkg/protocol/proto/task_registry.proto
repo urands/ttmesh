@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package ttmesh.proto;
+
+option go_package = "ttmesh/pkg/protocol/proto;ttmeshproto";
+
+// Task capability registration model
+//
+// Purpose:
+// - Allow a worker process to announce the tasks (functions) it can execute
+//   to a local node, with enough metadata for routing and scheduling.
+// - Keep it simple but flexible: minimal required fields, optional hints,
+//   and forward-compatible maps for extensions.
+// - Support common lifecycle operations: register, update, deregister.
+//
+// Notes:
+// - This complements runtime Invoke/Result in task.proto.
+// - A "task" here is a capability/handler (e.g., "video.decode"), not a
+//   single task instance execution.
+// - For large/structured input schemas, advertise only lightweight hints
+//   here; detailed validation happens at Invoke time.
+
+import "common.proto";   // NodeRef, BlobRef, Metrics, etc.
+import "task.proto";     // ParamDescriptor for I/O hints
+import "worker.proto";   // ResourceReq, FeatureFlags, NetworkEndpoint
+
+// Optional contract describing expected inputs/outputs of a task.
+// This is advisory and can be used by UIs/validators. The actual runtime
+// enforcement happens using Invoke params and worker-side validation.
+message IOContract {
+  // Expected input parameters. Names must be unique within the task.
+  repeated ParamDescriptor inputs = 1;
+
+  // Expected outputs by name (advisory). Use OutputDescriptor for light hints.
+  repeated OutputDescriptor outputs = 2;
+}
+
+// Lightweight output descriptor for advertising purposes.
+message OutputDescriptor {
+  string name = 1;             // logical output name (e.g., "video", "log")
+  string media_type = 2;       // MIME (e.g., "application/octet-stream")
+  string schema_ref = 3;       // optional schema/IDL reference
+  bool streamed = 4;           // whether output may stream
+}
+
+// Stable identifier for addressing a task capability. Only one of the fields
+// is typically needed; receivers match by the most specific provided.
+message TaskKey {
+  string name = 1;             // task name, e.g., "ai.analyze"
+  string version = 2;          // semantic version or tag
+  string stable_id = 3;        // canonical content id if available
+}
+
+// Task descriptor advertised by a worker. Mirrors FunctionDesc in spirit but
+// remains task-focused and includes optional I/O hints.
+message TaskDescriptor {
+  // Human-facing identity
+  string name = 1;               // unique task name ("group.action")
+  string version = 2;            // version/tag ("1.2.3" or git sha/tag)
+
+  // Stable implementation identity (identical across identical workers)
+  string stable_id = 10;         // canonical id (optional)
+  string hash_alg = 11;          // e.g., "sha256", "blake3"
+  bytes  hash = 12;              // digest over canonical package/manifest
+
+  // Capabilities and defaults
+  bool stream_input = 3;         // supports ParamChunk input
+  bool stream_output = 4;        // produces streaming Result
+  uint32 priority_default = 5;   // default priority 0..255
+  ResourceReq min_req = 6;       // minimal resource requirements
+  uint32 max_concurrency = 7;    // worker-local limit (0 = no explicit limit)
+
+  // Optional interface hints
+  IOContract contract = 20;      // advisory inputs/outputs
+  // Optional access control policy (per-task). If set and require_signature=true,
+  // callers must be signed and present in allowlists.
+  AuthPolicy auth = 21;
+
+  // Free-form annotations for extensions and routing hints
+  map<string,string> meta = 50;  // e.g., {"lang":"py", "role":"ingest"}
+}
+
+// Register a set of task capabilities from a worker with the node.
+message TaskRegister {
+  string worker_id = 1;                        // stable worker identity
+  NodeRef self = 2;                            // worker node reference
+  repeated TaskDescriptor tasks = 3;           // capabilities to add/replace
+
+  // Optional: how to reach the worker for direct execution
+  repeated NetworkEndpoint endpoints = 4;      // e.g., grpc+tcp, quic, uds
+
+  // Optional: feature flags at the worker level
+  FeatureFlags features = 5;                   // streaming/compression/etc
+
+  // Optional placement/routing labels (region, tier, arch, gpu=...)
+  map<string,string> labels = 6;
+}
+
+// Acknowledgement for registration requests.
+message TaskRegisterAck {
+  bool accepted = 1;                           // false when rejected
+  string reason = 2;                           // human-readable reason
+  // Optional: list of task names or stable_ids that conflicted/ignored
+  repeated string conflicts = 3;
+}
+
+// Update/delta operations for previously registered tasks.
+message TaskUpdate {
+  string worker_id = 1;
+  repeated TaskDescriptor add_or_update = 2;   // upsert by (stable_id|name+version)
+  repeated TaskKey remove = 3;                 // remove by key
+
+  // Optional worker-level changes (deltas)
+  repeated NetworkEndpoint endpoints = 4;      // replace if set (idempotent)
+  map<string,string> labels_set = 5;           // set/update labels
+  repeated string labels_del = 6;              // delete label keys
+}
+
+// Explicit deregistration for a worker or specific tasks.
+message TaskDeregister {
+  string worker_id = 1;                        // required
+  repeated TaskKey tasks = 2;                  // empty = deregister all
+  string reason = 3;                           // optional reason
+}
+
+// List registered workers (with optional filtering and pagination)
+message TaskListWorkers {
+  // Optional label filter: match workers whose labels are a superset of these.
+  map<string,string> label_filter = 1;
+  // Optional capability filter
+  string function_name = 2;     // filter workers that advertise this task name
+  string version = 3;           // optional semver/tag selector
+  // Include per-worker task descriptors in response (may be large)
+  bool include_tasks = 4;
+  // Pagination (optional)
+  uint32 page_size = 5;         // 0 = default, max enforced by server
+  string page_token = 6;        // returned from previous reply
+}
+
+message WorkerRecord {
+  string worker_id = 1;
+  NodeRef self = 2;
+  repeated NetworkEndpoint endpoints = 3;
+  FeatureFlags features = 4;
+  map<string,string> labels = 5;
+  ResourceCapacity capacity_total = 6;
+  ResourceCapacity capacity_free = 7;
+  repeated TaskDescriptor tasks = 8; // present if include_tasks=true
+}
+
+message TaskListWorkersReply {
+  repeated WorkerRecord workers = 1;
+  string next_page_token = 2;
+}

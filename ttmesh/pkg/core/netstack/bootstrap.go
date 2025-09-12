@@ -16,6 +16,7 @@ import (
     tquic "ttmesh/pkg/transport/quic"
     ttcp "ttmesh/pkg/transport/tcp"
     "ttmesh/pkg/transport/udp"
+    "ttmesh/pkg/registry"
 )
 
 // StartFromConfig builds transports per config, starts listeners and performs initial dials.
@@ -34,7 +35,7 @@ type Manager struct {
 func (m *Manager) ActiveDials() int64     { return m.activeDials }
 func (m *Manager) ActiveListeners() int64 { return m.activeListeners }
 
-func StartFromConfig(ctx context.Context, cfg []config.TransportConfig, mgr *transport.Manager, ps *peers.Store, localID transport.PeerID, rtr interface{ SendBytesToPeer(context.Context, transport.PeerID, []byte) error }, priv ed25519.PrivateKey, nodeName string, pl interface{ EnqueueProto(transport.PeerID, *ttmeshproto.Envelope, []byte) }, opts Options) (func(), *Manager, error) {
+func StartFromConfig(ctx context.Context, cfg []config.TransportConfig, mgr *transport.Manager, ps *peers.Store, reg *registry.Store, localID transport.PeerID, rtr interface{ SendBytesToPeer(context.Context, transport.PeerID, []byte) error }, priv ed25519.PrivateKey, nodeName string, pl interface{ EnqueueProto(transport.PeerID, *ttmeshproto.Envelope, []byte) }, opts Options) (func(), *Manager, error) {
     var closers []func()
     var mu sync.Mutex
     addCloser := func(f func()) { mu.Lock(); defer mu.Unlock(); closers = append(closers, f) }
@@ -60,7 +61,7 @@ func StartFromConfig(ctx context.Context, cfg []config.TransportConfig, mgr *tra
             nm.activeListeners++
             go func() {
                 defer func() { nm.activeListeners-- }()
-                acceptLoop(ctx, mgr, l, ps, localID, rtr, pl, nodeName, priv.Public().(ed25519.PublicKey))
+                acceptLoop(ctx, mgr, l, ps, reg, localID, rtr, pl, nodeName, priv.Public().(ed25519.PublicKey))
             }()
         }
 
@@ -70,7 +71,7 @@ func StartFromConfig(ctx context.Context, cfg []config.TransportConfig, mgr *tra
             nm.activeDials++
             go func() {
                 defer func() { nm.activeDials-- }()
-                dialLoop(ctx, tr, mgr, ps, localID, rtr, priv, nodeName, pl, d.Address, d.PeerID, opts)
+                dialLoop(ctx, tr, mgr, ps, reg, localID, rtr, priv, nodeName, pl, d.Address, d.PeerID, opts)
             }()
         }
     }

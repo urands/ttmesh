@@ -135,6 +135,12 @@ type Control struct {
 	//	*Control_WorkerAdvert
 	//	*Control_WorkerQuery
 	//	*Control_WorkerQueryReply
+	//	*Control_TaskRegister
+	//	*Control_TaskRegisterAck
+	//	*Control_TaskUpdate
+	//	*Control_TaskDeregister
+	//	*Control_TaskListWorkers
+	//	*Control_TaskListWorkersReply
 	Kind          isControl_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -285,6 +291,60 @@ func (x *Control) GetWorkerQueryReply() *WorkerQueryReply {
 	return nil
 }
 
+func (x *Control) GetTaskRegister() *TaskRegister {
+	if x != nil {
+		if x, ok := x.Kind.(*Control_TaskRegister); ok {
+			return x.TaskRegister
+		}
+	}
+	return nil
+}
+
+func (x *Control) GetTaskRegisterAck() *TaskRegisterAck {
+	if x != nil {
+		if x, ok := x.Kind.(*Control_TaskRegisterAck); ok {
+			return x.TaskRegisterAck
+		}
+	}
+	return nil
+}
+
+func (x *Control) GetTaskUpdate() *TaskUpdate {
+	if x != nil {
+		if x, ok := x.Kind.(*Control_TaskUpdate); ok {
+			return x.TaskUpdate
+		}
+	}
+	return nil
+}
+
+func (x *Control) GetTaskDeregister() *TaskDeregister {
+	if x != nil {
+		if x, ok := x.Kind.(*Control_TaskDeregister); ok {
+			return x.TaskDeregister
+		}
+	}
+	return nil
+}
+
+func (x *Control) GetTaskListWorkers() *TaskListWorkers {
+	if x != nil {
+		if x, ok := x.Kind.(*Control_TaskListWorkers); ok {
+			return x.TaskListWorkers
+		}
+	}
+	return nil
+}
+
+func (x *Control) GetTaskListWorkersReply() *TaskListWorkersReply {
+	if x != nil {
+		if x, ok := x.Kind.(*Control_TaskListWorkersReply); ok {
+			return x.TaskListWorkersReply
+		}
+	}
+	return nil
+}
+
 type isControl_Kind interface {
 	isControl_Kind()
 }
@@ -338,6 +398,31 @@ type Control_WorkerQueryReply struct {
 	WorkerQueryReply *WorkerQueryReply `protobuf:"bytes,23,opt,name=worker_query_reply,json=workerQueryReply,proto3,oneof"` // reply with candidates
 }
 
+type Control_TaskRegister struct {
+	// Task capability control (worker <-> node)
+	TaskRegister *TaskRegister `protobuf:"bytes,24,opt,name=task_register,json=taskRegister,proto3,oneof"` // register one or multiple tasks
+}
+
+type Control_TaskRegisterAck struct {
+	TaskRegisterAck *TaskRegisterAck `protobuf:"bytes,25,opt,name=task_register_ack,json=taskRegisterAck,proto3,oneof"` // ack/nack for registration
+}
+
+type Control_TaskUpdate struct {
+	TaskUpdate *TaskUpdate `protobuf:"bytes,26,opt,name=task_update,json=taskUpdate,proto3,oneof"` // add/update/remove tasks
+}
+
+type Control_TaskDeregister struct {
+	TaskDeregister *TaskDeregister `protobuf:"bytes,27,opt,name=task_deregister,json=taskDeregister,proto3,oneof"` // deregister tasks or all
+}
+
+type Control_TaskListWorkers struct {
+	TaskListWorkers *TaskListWorkers `protobuf:"bytes,28,opt,name=task_list_workers,json=taskListWorkers,proto3,oneof"` // list registered workers
+}
+
+type Control_TaskListWorkersReply struct {
+	TaskListWorkersReply *TaskListWorkersReply `protobuf:"bytes,29,opt,name=task_list_workers_reply,json=taskListWorkersReply,proto3,oneof"` // list response
+}
+
 func (*Control_Flow) isControl_Kind() {}
 
 func (*Control_Cancel) isControl_Kind() {}
@@ -361,6 +446,18 @@ func (*Control_WorkerAdvert) isControl_Kind() {}
 func (*Control_WorkerQuery) isControl_Kind() {}
 
 func (*Control_WorkerQueryReply) isControl_Kind() {}
+
+func (*Control_TaskRegister) isControl_Kind() {}
+
+func (*Control_TaskRegisterAck) isControl_Kind() {}
+
+func (*Control_TaskUpdate) isControl_Kind() {}
+
+func (*Control_TaskDeregister) isControl_Kind() {}
+
+func (*Control_TaskListWorkers) isControl_Kind() {}
+
+func (*Control_TaskListWorkersReply) isControl_Kind() {}
 
 // Acknowledgement for a specific message id
 type Ack struct {
@@ -1080,12 +1177,12 @@ var File_control_proto protoreflect.FileDescriptor
 
 const file_control_proto_rawDesc = "" +
 	"\n" +
-	"\rcontrol.proto\x12\fttmesh.proto\x1a\fcommon.proto\x1a\fworker.proto\"T\n" +
+	"\rcontrol.proto\x12\fttmesh.proto\x1a\fcommon.proto\x1a\fworker.proto\x1a\x13task_registry.proto\"T\n" +
 	"\vFlowControl\x12-\n" +
 	"\x05scope\x18\x01 \x01(\x0e2\x17.ttmesh.proto.FlowScopeR\x05scope\x12\x16\n" +
 	"\x06credit\x18\x02 \x01(\rR\x06credit\" \n" +
 	"\x06Cancel\x12\x16\n" +
-	"\x06reason\x18\x01 \x01(\tR\x06reason\"\xfa\x05\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason\"\xba\t\n" +
 	"\aControl\x12/\n" +
 	"\x04flow\x18\x01 \x01(\v2\x19.ttmesh.proto.FlowControlH\x00R\x04flow\x12.\n" +
 	"\x06cancel\x18\x02 \x01(\v2\x14.ttmesh.proto.CancelH\x00R\x06cancel\x12/\n" +
@@ -1099,7 +1196,14 @@ const file_control_proto_rawDesc = "" +
 	"\x0fworker_register\x18\x14 \x01(\v2\x1c.ttmesh.proto.WorkerRegisterH\x00R\x0eworkerRegister\x12A\n" +
 	"\rworker_advert\x18\x15 \x01(\v2\x1a.ttmesh.proto.WorkerAdvertH\x00R\fworkerAdvert\x12>\n" +
 	"\fworker_query\x18\x16 \x01(\v2\x19.ttmesh.proto.WorkerQueryH\x00R\vworkerQuery\x12N\n" +
-	"\x12worker_query_reply\x18\x17 \x01(\v2\x1e.ttmesh.proto.WorkerQueryReplyH\x00R\x10workerQueryReplyB\x06\n" +
+	"\x12worker_query_reply\x18\x17 \x01(\v2\x1e.ttmesh.proto.WorkerQueryReplyH\x00R\x10workerQueryReply\x12A\n" +
+	"\rtask_register\x18\x18 \x01(\v2\x1a.ttmesh.proto.TaskRegisterH\x00R\ftaskRegister\x12K\n" +
+	"\x11task_register_ack\x18\x19 \x01(\v2\x1d.ttmesh.proto.TaskRegisterAckH\x00R\x0ftaskRegisterAck\x12;\n" +
+	"\vtask_update\x18\x1a \x01(\v2\x18.ttmesh.proto.TaskUpdateH\x00R\n" +
+	"taskUpdate\x12G\n" +
+	"\x0ftask_deregister\x18\x1b \x01(\v2\x1c.ttmesh.proto.TaskDeregisterH\x00R\x0etaskDeregister\x12K\n" +
+	"\x11task_list_workers\x18\x1c \x01(\v2\x1d.ttmesh.proto.TaskListWorkersH\x00R\x0ftaskListWorkers\x12[\n" +
+	"\x17task_list_workers_reply\x18\x1d \x01(\v2\".ttmesh.proto.TaskListWorkersReplyH\x00R\x14taskListWorkersReplyB\x06\n" +
 	"\x04kind\"g\n" +
 	"\x03Ack\x12\x1d\n" +
 	"\n" +
@@ -1173,27 +1277,33 @@ func file_control_proto_rawDescGZIP() []byte {
 
 var file_control_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_control_proto_goTypes = []any{
-	(*FlowControl)(nil),      // 0: ttmesh.proto.FlowControl
-	(*Cancel)(nil),           // 1: ttmesh.proto.Cancel
-	(*Control)(nil),          // 2: ttmesh.proto.Control
-	(*Ack)(nil),              // 3: ttmesh.proto.Ack
-	(*LeaseRequest)(nil),     // 4: ttmesh.proto.LeaseRequest
-	(*LeaseReply)(nil),       // 5: ttmesh.proto.LeaseReply
-	(*PeerHello)(nil),        // 6: ttmesh.proto.PeerHello
-	(*PeerHelloAck)(nil),     // 7: ttmesh.proto.PeerHelloAck
-	(*GetRoutes)(nil),        // 8: ttmesh.proto.GetRoutes
-	(*PeerAdj)(nil),          // 9: ttmesh.proto.PeerAdj
-	(*RouteCandidatePB)(nil), // 10: ttmesh.proto.RouteCandidatePB
-	(*RoutesReply)(nil),      // 11: ttmesh.proto.RoutesReply
-	(*GetIdentity)(nil),      // 12: ttmesh.proto.GetIdentity
-	(*IdentityReply)(nil),    // 13: ttmesh.proto.IdentityReply
-	(FlowScope)(0),           // 14: ttmesh.proto.FlowScope
-	(*WorkerRegister)(nil),   // 15: ttmesh.proto.WorkerRegister
-	(*WorkerAdvert)(nil),     // 16: ttmesh.proto.WorkerAdvert
-	(*WorkerQuery)(nil),      // 17: ttmesh.proto.WorkerQuery
-	(*WorkerQueryReply)(nil), // 18: ttmesh.proto.WorkerQueryReply
-	(AckCode)(0),             // 19: ttmesh.proto.AckCode
-	(*PeerMeta)(nil),         // 20: ttmesh.proto.PeerMeta
+	(*FlowControl)(nil),          // 0: ttmesh.proto.FlowControl
+	(*Cancel)(nil),               // 1: ttmesh.proto.Cancel
+	(*Control)(nil),              // 2: ttmesh.proto.Control
+	(*Ack)(nil),                  // 3: ttmesh.proto.Ack
+	(*LeaseRequest)(nil),         // 4: ttmesh.proto.LeaseRequest
+	(*LeaseReply)(nil),           // 5: ttmesh.proto.LeaseReply
+	(*PeerHello)(nil),            // 6: ttmesh.proto.PeerHello
+	(*PeerHelloAck)(nil),         // 7: ttmesh.proto.PeerHelloAck
+	(*GetRoutes)(nil),            // 8: ttmesh.proto.GetRoutes
+	(*PeerAdj)(nil),              // 9: ttmesh.proto.PeerAdj
+	(*RouteCandidatePB)(nil),     // 10: ttmesh.proto.RouteCandidatePB
+	(*RoutesReply)(nil),          // 11: ttmesh.proto.RoutesReply
+	(*GetIdentity)(nil),          // 12: ttmesh.proto.GetIdentity
+	(*IdentityReply)(nil),        // 13: ttmesh.proto.IdentityReply
+	(FlowScope)(0),               // 14: ttmesh.proto.FlowScope
+	(*WorkerRegister)(nil),       // 15: ttmesh.proto.WorkerRegister
+	(*WorkerAdvert)(nil),         // 16: ttmesh.proto.WorkerAdvert
+	(*WorkerQuery)(nil),          // 17: ttmesh.proto.WorkerQuery
+	(*WorkerQueryReply)(nil),     // 18: ttmesh.proto.WorkerQueryReply
+	(*TaskRegister)(nil),         // 19: ttmesh.proto.TaskRegister
+	(*TaskRegisterAck)(nil),      // 20: ttmesh.proto.TaskRegisterAck
+	(*TaskUpdate)(nil),           // 21: ttmesh.proto.TaskUpdate
+	(*TaskDeregister)(nil),       // 22: ttmesh.proto.TaskDeregister
+	(*TaskListWorkers)(nil),      // 23: ttmesh.proto.TaskListWorkers
+	(*TaskListWorkersReply)(nil), // 24: ttmesh.proto.TaskListWorkersReply
+	(AckCode)(0),                 // 25: ttmesh.proto.AckCode
+	(*PeerMeta)(nil),             // 26: ttmesh.proto.PeerMeta
 }
 var file_control_proto_depIdxs = []int32{
 	14, // 0: ttmesh.proto.FlowControl.scope:type_name -> ttmesh.proto.FlowScope
@@ -1209,17 +1319,23 @@ var file_control_proto_depIdxs = []int32{
 	16, // 10: ttmesh.proto.Control.worker_advert:type_name -> ttmesh.proto.WorkerAdvert
 	17, // 11: ttmesh.proto.Control.worker_query:type_name -> ttmesh.proto.WorkerQuery
 	18, // 12: ttmesh.proto.Control.worker_query_reply:type_name -> ttmesh.proto.WorkerQueryReply
-	19, // 13: ttmesh.proto.Ack.code:type_name -> ttmesh.proto.AckCode
-	20, // 14: ttmesh.proto.PeerHello.meta:type_name -> ttmesh.proto.PeerMeta
-	20, // 15: ttmesh.proto.PeerHelloAck.meta:type_name -> ttmesh.proto.PeerMeta
-	20, // 16: ttmesh.proto.RoutesReply.peers:type_name -> ttmesh.proto.PeerMeta
-	10, // 17: ttmesh.proto.RoutesReply.candidates:type_name -> ttmesh.proto.RouteCandidatePB
-	9,  // 18: ttmesh.proto.RoutesReply.adjacency:type_name -> ttmesh.proto.PeerAdj
-	19, // [19:19] is the sub-list for method output_type
-	19, // [19:19] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	19, // 13: ttmesh.proto.Control.task_register:type_name -> ttmesh.proto.TaskRegister
+	20, // 14: ttmesh.proto.Control.task_register_ack:type_name -> ttmesh.proto.TaskRegisterAck
+	21, // 15: ttmesh.proto.Control.task_update:type_name -> ttmesh.proto.TaskUpdate
+	22, // 16: ttmesh.proto.Control.task_deregister:type_name -> ttmesh.proto.TaskDeregister
+	23, // 17: ttmesh.proto.Control.task_list_workers:type_name -> ttmesh.proto.TaskListWorkers
+	24, // 18: ttmesh.proto.Control.task_list_workers_reply:type_name -> ttmesh.proto.TaskListWorkersReply
+	25, // 19: ttmesh.proto.Ack.code:type_name -> ttmesh.proto.AckCode
+	26, // 20: ttmesh.proto.PeerHello.meta:type_name -> ttmesh.proto.PeerMeta
+	26, // 21: ttmesh.proto.PeerHelloAck.meta:type_name -> ttmesh.proto.PeerMeta
+	26, // 22: ttmesh.proto.RoutesReply.peers:type_name -> ttmesh.proto.PeerMeta
+	10, // 23: ttmesh.proto.RoutesReply.candidates:type_name -> ttmesh.proto.RouteCandidatePB
+	9,  // 24: ttmesh.proto.RoutesReply.adjacency:type_name -> ttmesh.proto.PeerAdj
+	25, // [25:25] is the sub-list for method output_type
+	25, // [25:25] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_control_proto_init() }
@@ -1229,6 +1345,7 @@ func file_control_proto_init() {
 	}
 	file_common_proto_init()
 	file_worker_proto_init()
+	file_task_registry_proto_init()
 	file_control_proto_msgTypes[2].OneofWrappers = []any{
 		(*Control_Flow)(nil),
 		(*Control_Cancel)(nil),
@@ -1242,6 +1359,12 @@ func file_control_proto_init() {
 		(*Control_WorkerAdvert)(nil),
 		(*Control_WorkerQuery)(nil),
 		(*Control_WorkerQueryReply)(nil),
+		(*Control_TaskRegister)(nil),
+		(*Control_TaskRegisterAck)(nil),
+		(*Control_TaskUpdate)(nil),
+		(*Control_TaskDeregister)(nil),
+		(*Control_TaskListWorkers)(nil),
+		(*Control_TaskListWorkersReply)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

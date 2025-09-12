@@ -12,6 +12,8 @@ proto:
 		./pkg/protocol/proto/common.proto \
 		./pkg/protocol/proto/routing.proto \
 		./pkg/protocol/proto/task.proto \
+		./pkg/protocol/proto/worker.proto \
+		./pkg/protocol/proto/task_registry.proto \
 		./pkg/protocol/proto/control.proto \
 		./pkg/protocol/proto/tiny.proto \
 		./pkg/protocol/proto/ttmesh.proto
